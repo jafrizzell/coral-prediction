@@ -9,6 +9,7 @@ from math import sqrt, floor
 import os
 import pathlib
 from itertools import product
+from scipy.stats import pearsonr
 import time
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
@@ -16,6 +17,7 @@ cwd = pathlib.Path(os.getcwd())
 path = str(cwd.parent) + '/processed_data/combined_data_truncated.csv'
 
 raw = pd.read_csv(path)
+
 
 raw = raw.sample(frac=0.2, random_state=0)
 
@@ -35,11 +37,19 @@ test_labels = test_features['coral_present']
 train_features.pop('coral_present')
 test_features.pop('coral_present')
 
+print(train.corr()['coral_present'])
+print(pearsonr(train_features['latitude'], train_labels))
+print(pearsonr(train_features['longitude'], train_labels))
+print(pearsonr(train_features['depth'], train_labels))
+print(pearsonr(train_features['temperature'], train_labels))
+print(pearsonr(train_features['salinity'], train_labels))
+print(pearsonr(train_features['oxygen'], train_labels))
+
 
 def fit_and_evaluate(architecture):
     dnn_model = build_and_compile_model(architecture)
 
-    history = dnn_model.fit(train_features, train_labels, validation_split=0.2, verbose=0, epochs=75)
+    history = dnn_model.fit(train_features, train_labels, validation_split=0.2, verbose=0, epochs=50)
     plot_loss(history)
 
     test_results = dnn_model.evaluate(test_features, test_labels, verbose=0)
@@ -101,12 +111,12 @@ aic_scores = []
 r2_scores = []
 maes = []
 rmses = []
-l1 = np.linspace(32, 256, 5)
-l2 = np.linspace(0, 256, 5)
-l3 = np.linspace(0, 256, 5)
+# l1 = np.linspace(32, 256, 5)
+# l2 = np.linspace(0, 256, 5)
+# l3 = np.linspace(0, 256, 5)
 activ = ['relu', 'tanh']
 # parametric_space = list(product(*[l1, l2, l3, activ]))
-parametric_space = [[128, 128, 128, 'tanh']]
+parametric_space = [[200, 64, 192, 'relu']]
 print(parametric_space)
 num_hidden = len(list(i for i in parametric_space[0] if isinstance(i, (int or float))))
 num_hyper = len(parametric_space[0]) - num_hidden
@@ -135,18 +145,18 @@ output_data = [parametric_space_t[0], parametric_space_t[1], parametric_space_t[
 output_data = np.asarray(output_data).transpose().tolist()
 print(output_data)
 oput = pd.DataFrame(output_data, columns=['L1', 'L2', 'L3', 'AIC', 'MAE', 'RMSE', 'R2'])
-print(oput)
+# print(oput)
 # oput.to_csv('Parametric_space_study.csv', index=False)
 print(models[0].summary())
-out_path = str(cwd.parent) + '/models/trial0.2.h5'
+out_path = str(cwd.parent) + '/models/trial0.3.h5'
 models[0].save(out_path)
 
-a = plt.axes(aspect='equal')
-plt.scatter(test_labels[0:floor(len(test_labels)/4)], test_predictions[0:floor(len(test_predictions)/4)], s=0.8)
-plt.xlabel('True Values')
-plt.ylabel('Predictions')
-lims = [-0.5, 1.5]
-plt.xlim(lims)
-plt.ylim(lims)
-_ = plt.plot(lims, lims)
-plt.show()
+# a = plt.axes(aspect='equal')
+# plt.scatter(test_labels[0:floor(len(test_labels)/4)], test_predictions[0:floor(len(test_predictions)/4)], s=0.8)
+# plt.xlabel('True Values')
+# plt.ylabel('Predictions')
+# lims = [-0.5, 1.5]
+# plt.xlim(lims)
+# plt.ylim(lims)
+# _ = plt.plot(lims, lims)
+# plt.show()

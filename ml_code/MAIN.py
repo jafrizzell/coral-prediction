@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import pathlib
+import tensorflow_addons as tfa
 
 path = str(pathlib.Path(os.getcwd()).parent) + '/models/trial0.2.h5'
 
