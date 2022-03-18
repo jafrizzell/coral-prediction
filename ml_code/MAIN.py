@@ -1,7 +1,8 @@
+import os
 import tensorflow as tf
-import numpy as np
+import pathlib
 
-path = 'C:/Users/jafri/Documents/GitHub/coral-prediction/models/trial0.0.h5'
+path = str(pathlib.Path(os.getcwd()).parent) + '/models/trial0.2.h5'
 
 model = tf.keras.models.load_model(path)
 

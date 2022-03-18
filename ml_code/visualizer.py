@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
+import pathlib
+import os
 import pandas as pd
 
-path = 'C:\Users\jafri\Documents\GitHub\coral-prediction\processed_data\combined_data_truncated.csv'
+path = str(pathlib.Path(os.getcwd()).parent) + '/processed_data/combined_data_truncated.csv'
 
 raw = pd.read_csv(path)
 

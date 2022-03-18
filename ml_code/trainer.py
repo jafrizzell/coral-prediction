@@ -5,15 +5,19 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 import RegscorePy
-from math import sqrt
+from math import sqrt, floor
+import os
+import pathlib
+from itertools import product
 import time
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
-path = 'C:\Users\jafri\Documents\GitHub\coral-prediction\processed_data\combined_data_truncated.csv'
+cwd = pathlib.Path(os.getcwd())
+path = str(cwd.parent) + '/processed_data/combined_data_truncated.csv'
 
 raw = pd.read_csv(path)
 
-raw = raw.sample(frac=0.08, random_state=0)
+raw = raw.sample(frac=0.2, random_state=0)
 
 print(raw.describe())
 
@@ -35,7 +39,7 @@ test_features.pop('coral_present')
 def fit_and_evaluate(architecture):
     dnn_model = build_and_compile_model(architecture)
 
-    history = dnn_model.fit(train_features, train_labels, validation_split=0.2, verbose=0, epochs=20)
+    history = dnn_model.fit(train_features, train_labels, validation_split=0.2, verbose=0, epochs=75)
     plot_loss(history)
 
     test_results = dnn_model.evaluate(test_features, test_labels, verbose=0)
@@ -50,7 +54,7 @@ def fit_and_evaluate(architecture):
 def plot_loss(history):
     plt.plot(history.history['loss'], label='loss')
     plt.plot(history.history['val_loss'], label='val_loss')
-    plt.ylim([0, 30])
+    # plt.ylim([0, 30])
     plt.xlabel('Epoch')
     plt.ylabel('Error')
     plt.legend()
@@ -59,41 +63,32 @@ def plot_loss(history):
     # pass
 
 
+def add_layer(dets, hyper, prev):
+    default = ['relu']
+    try:
+        layer = layers.Dense(dets, activation=hyper[0])(prev)
+    except IndexError:
+        layer = layers.Dense(dets, activation=default[0])(prev)
+    return layer
+
+
 def build_and_compile_model(arch):
     # Adjust the number of hidden layers and neurons per layer that results in best fit NN
+    hidden_layers = []
     inputs = keras.Input(shape=(6,))
-    if arch[1] == 0.0:
-        norm_layer = layers.BatchNormalization()(inputs)
-        dense1 = layers.Dense(arch[0], activation='relu')(norm_layer)
-        dense1 = layers.Dropout(rate=0.2)(dense1)
-        dense3 = layers.Dense(arch[2], activation='relu')(dense1)
-        dense3 = layers.Dropout(rate=0.2)(dense3)
-        outputs = layers.Dense(1)(dense3)
-
-    elif arch[2] == 0.0:
-        norm_layer = layers.BatchNormalization()(inputs)
-        dense1 = layers.Dense(arch[0], activation='relu')(norm_layer)
-        dense1 = layers.Dropout(rate=0.2)(dense1)
-        dense2 = layers.Dense(arch[1], activation='relu')(dense1)
-        dense2 = layers.Dropout(rate=0.2)(dense2)
-        outputs = layers.Dense(1)(dense2)
-
-    elif arch[1] == 0.0 and arch[2] == 0.0:
-        norm_layer = layers.BatchNormalization()(inputs)
-        dense1 = layers.Dense(arch[0], activation='relu')(norm_layer)
-        dense1 = layers.Dropout(rate=0.2)(dense1)
-        outputs = layers.Dense(1)(dense1)
-
-    else:
-        norm_layer = layers.BatchNormalization()(inputs)
-        dense1 = layers.Dense(arch[0], activation='relu')(norm_layer)
-        dense1 = layers.Dropout(rate=0.2)(dense1)
-        dense2 = layers.Dense(arch[1], activation='relu')(dense1)
-        dense2 = layers.Dropout(rate=0.2)(dense2)
-        dense3 = layers.Dense(arch[2], activation='relu')(dense2)
-        dense3 = layers.Dropout(rate=0.2)(dense3)
-        outputs = layers.Dense(1)(dense3)
-
+    norm_layer = layers.BatchNormalization()(inputs)
+    hidden_layers.append(inputs)
+    hidden_layers.append(norm_layer)
+    for i in range(num_hidden):
+        if arch[i] == 0:
+            pass
+        else:
+            layer = add_layer(arch[i], arch[num_hidden:], hidden_layers[-1])
+            hidden_layers.append(layer)
+            layer = layers.Dropout(rate=0.2)(hidden_layers[-1])
+            hidden_layers.append(layer)
+    outputs = layers.Dense(1)(hidden_layers[-1])
+    hidden_layers.append(outputs)
     model = keras.Model(inputs=inputs, outputs=outputs)
 
     model.compile(loss='mean_absolute_error',
@@ -106,12 +101,15 @@ aic_scores = []
 r2_scores = []
 maes = []
 rmses = []
-# l1 = np.linspace(32, 256, 8)
-# l2 = np.linspace(0, 256, 9)
-# l3 = np.linspace(0, 256, 9)
-# parametric_space = list(product(*[l1, l2, l3]))
-parametric_space = [[128, 128, 128]]
+l1 = np.linspace(32, 256, 5)
+l2 = np.linspace(0, 256, 5)
+l3 = np.linspace(0, 256, 5)
+activ = ['relu', 'tanh']
+# parametric_space = list(product(*[l1, l2, l3, activ]))
+parametric_space = [[128, 128, 128, 'tanh']]
 print(parametric_space)
+num_hidden = len(list(i for i in parametric_space[0] if isinstance(i, (int or float))))
+num_hyper = len(parametric_space[0]) - num_hidden
 start_t = time.time()
 c = 1
 
@@ -133,17 +131,18 @@ for arch in parametric_space:
     c += 1
 
 parametric_space_t = np.asarray(parametric_space).transpose().tolist()
-output_data = [parametric_space_t[0], parametric_space_t[1], parametric_space_t[1], aic_scores, maes, rmses, r2_scores]
+output_data = [parametric_space_t[0], parametric_space_t[1], parametric_space_t[2], aic_scores, maes, rmses, r2_scores]
 output_data = np.asarray(output_data).transpose().tolist()
 print(output_data)
 oput = pd.DataFrame(output_data, columns=['L1', 'L2', 'L3', 'AIC', 'MAE', 'RMSE', 'R2'])
 print(oput)
 # oput.to_csv('Parametric_space_study.csv', index=False)
-
-models[0].save('C:/Users/jafri/Documents/GitHub/coral-prediction/models/trial0.0.h5')
+print(models[0].summary())
+out_path = str(cwd.parent) + '/models/trial0.2.h5'
+models[0].save(out_path)
 
 a = plt.axes(aspect='equal')
-plt.scatter(test_labels, test_predictions, s=0.8)
+plt.scatter(test_labels[0:floor(len(test_labels)/4)], test_predictions[0:floor(len(test_predictions)/4)], s=0.8)
 plt.xlabel('True Values')
 plt.ylabel('Predictions')
 lims = [-0.5, 1.5]
