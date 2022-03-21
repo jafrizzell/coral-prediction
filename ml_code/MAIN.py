@@ -1,14 +1,13 @@
 import os
-import tensorflow as tf
 import pathlib
-import tensorflow_addons as tfa
+import CoralClass
 
-path = str(pathlib.Path(os.getcwd()).parent) + '/models/trial0.2.h5'
+modelpath = str(pathlib.Path(os.getcwd()).parent) + '/models/trial0.3.h5'
 
-model = tf.keras.models.load_model(path)
-
-conditions = [0, -100, 860, 12, 34.5, 5]
-
-predictions = model.predict([conditions])[0][0]
-
-print(predictions)
+CoralPredictor = CoralClass.CoralPrediction()
+CoralPredictor.set_model(modelpath)
+conditions = [38, -150, 1000, None, 20, None]
+mean_pred, med_pred = CoralPredictor.predict(conditions)
+print('----------------------------------------')
+print('The average likelihood of coral growth is: ', mean_pred*100, '%')
+print('The median likelihood of coral growth is: ', med_pred*100, '%')
