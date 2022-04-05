@@ -146,7 +146,7 @@ output_data = np.asarray(output_data).transpose().tolist()
 print(output_data)
 oput = pd.DataFrame(output_data, columns=['L1', 'L2', 'L3', 'AIC', 'MAE', 'RMSE', 'R2'])
 # print(oput)
-# oput.to_csv('Parametric_space_study.csv', index=False)
+oput.to_csv('Parametric_space_study.csv', index=False)
 print(models[0].summary())
 out_path = str(cwd.parent) + '/models/trial0.3.h5'
 models[0].save(out_path)
